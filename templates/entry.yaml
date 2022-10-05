@@ -1,0 +1,352 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+  "Need to add description"
+
+Parameters:
+  # Prerequisites
+  EnvAlias:
+    Type: String
+    Default: 'pov'
+  S3Bucket:
+    Type: String
+    Default: ""
+  PermissionsBoundary:
+    Type: String
+    Default: "BoundaryForAdministratorAccess"
+  # EKS and Sensor Details
+  FalconSensorType:
+    Description: Choose which type of Falcon Sensor to Install.  If launching on Fargate, you must choose FalconContainer.
+    AllowedValues:
+      - FalconContainer
+      - FalconNodeSensor
+    Default: FalconNodeSensor
+    Type: String
+  EC2orFargate:
+    Description: Choose which type of compute infrastructure to launch EKS.
+    AllowedValues:
+      - EC2
+      - Fargate
+    Default: EC2
+    Type: String
+  KubernetesVersion:
+    Type: String
+    AllowedValues: ["1.19", "1.20", "1.21", "1.22"]
+    Default: "1.21"
+    Description: Kubernetes control plane version.
+  # Create New VPC 
+  CreateNewVPC:
+    Description: 'If true, create a New VPC of range /24, 4 Subnets of /27 each, NAT Gateway and optional Internet Gateway (IGW)'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+    Type: String
+  NewVPCCIDR:
+    Description: 'If CreateNewVPC = true, set new VPC CIDR Range'
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/24
+    Default: 10.1.0.0/24
+    Type: String
+  # Use Customer VPC 
+  CustomerVPCID:
+    Description: 'Customer VPC ID if CreateNewVPC = false'
+    Default: ''
+    Type: String
+  CustomerVPCCIDR:
+    Description: 'Customer VPC CIDR Range if CreateNewVPC = false'
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: Must be in CIDR Notation. Eg. x.x.x.x/xx
+    Default: 10.0.0.0/16
+    Type: String
+  CustomerSubnetID1:
+    Description: 'Customer Subnet ID to launch EKS resources if CreateNewVPC = false'
+    Default: ''
+    Type: String
+  CustomerSubnetID2:
+    Description: 'Customer Subnet ID to launch EKS resources if CreateNewVPC = false'
+    Default: ''
+    Type: String
+  CustomerSubnetID3:
+    Description: 'Customer Subnet ID to launch Bastion resources if CreateNewVPC = false'
+    Default: ''
+    Type: String
+  # Falcon Keys
+  FalconCID:
+    Description: 'Customer CID for the Falcon Installation'
+    Type: String
+    AllowedPattern: "[a-z0-9-]+"
+  CrowdStrikeCloud:
+    Type: String
+    AllowedValues: ['us-1','us-2','eu-1']
+    Default: 'us-1'
+  FalconClientID:
+    Description: "Client ID for the Falcon API"
+    Type: String
+    Default: ''
+    NoEcho: true
+  FalconClientSecret:
+    Description: "Client Secret for the Falcon API"
+    Type: String
+    Default: ''
+    NoEcho: true
+  DockerAPIToken:
+    Description: "Docker API Token generated when registering K8S Cluster in Falcon"
+    Type: String
+    Default: ''
+    NoEcho: true
+  #Prometheus
+  InstallPrometheus:
+    Type: String
+    AllowedValues: ['true','false']
+    Default: 'true'
+    Description: Install Prometheus monitoring stack on EKS Cluster.
+  # Optional Bastion
+  CreateBastion:
+    Description: 'If true, create a new Linux EC2 Instance with K8s CLient Tools installed'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
+    Type: String  
+  KeyPairName:
+    Type: String
+    Default: 'none'
+  RemoteAccessCIDR:
+    Type: String
+    Default: '1.1.1.1/32'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Prerequisites"
+        Parameters:
+          - EnvAlias
+          - S3Bucket
+          - PermissionsBoundary
+      -
+        Label:
+          default: "EKS and Sensor Details"
+        Parameters:
+          - EC2orFargate
+          - KubernetesVersion
+          - FalconSensorType
+      -
+        Label:
+          default: "Create New VPC"
+        Parameters:
+          - CreateNewVPC
+          - NewVPCCIDR
+          - EnableInternetGateway
+      -
+        Label:
+          default: "Use Customer VPC"
+        Parameters:
+          - CustomerVPCID
+          - CustomerVPCCIDR
+          - CustomerSubnetID1
+          - CustomerSubnetID2
+          - CustomerSubnetID3
+      -
+        Label:
+          default: "Configure Falcon Keys"
+        Parameters:
+          - FalconCID
+          - FalconCIDlower
+          - CrowdStrikeCloud
+          - FalconClientID
+          - FalconClientSecret
+          - DockerAPIToken
+      -
+        Label:
+          default: "Monitoring Stack"
+        Parameters:
+          - InstallPrometheus
+      -
+        Label:
+          default: "Optional Bastion Host"
+        Parameters:
+          - CreateBastion
+          - KeyPairName
+          - RemoteAccessCIDR
+
+Conditions:
+  CreateNewVPCTrue: !Equals [ !Ref CreateNewVPC, 'true' ]
+  InstallPrometheus: !Equals [ !Ref InstallPrometheus, 'true' ]
+  CreateBastionTrue: !Equals [ !Ref CreateBastion, 'true' ]
+  EKSonEC2: !Not [ !Equals [ !Ref EC2orFargate, 'Fargate' ] ]
+  EKSonFargate: !Equals [ !Ref EC2orFargate, 'Fargate' ]
+  PrometheusEc2:
+    Fn::And:
+    - Condition: InstallPrometheus
+    - Condition: EKSonEC2
+  PrometheusFargate:
+    Fn::And:
+    - Condition: InstallPrometheus
+    - Condition: EKSonFargate
+
+Resources:
+  IAMStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/iam.yaml"
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        S3Bucket: !Ref S3Bucket
+        PermissionsBoundary: !Ref PermissionsBoundary
+
+  VPCStack:
+    Condition: CreateNewVPCTrue
+    Type: AWS::CloudFormation::Stack
+    DependsOn: IAMStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/vpc.yaml"
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        PermissionsBoundary: !Ref PermissionsBoundary
+        NewVPCCIDR: !Ref NewVPCCIDR
+  
+  EKSControlPlaneStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: IAMStack
+    Properties:
+      TemplateURL:  !Sub 'https://${S3Bucket}.s3.amazonaws.com/eksControlPlane.yaml'
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        PermissionsBoundary: !Ref PermissionsBoundary
+        EKSAccessRole: !GetAtt IAMStack.Outputs.EKSAccessRoleName
+        VPCID: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.VPCIDOut, !Ref CustomerVPCID ]
+        Subnet1: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.PrivateSubnet1Out, !Ref CustomerSubnetID1 ]
+        Subnet2: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.PrivateSubnet2Out, !Ref CustomerSubnetID2 ]
+        EKSQSExtensionRoleArn: !GetAtt IAMStack.Outputs.EKSQSExtensionRoleArn
+
+# EKS on EC2
+  EKSNodeGroupStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: EKSonEC2
+    DependsOn: EKSControlPlaneStack
+    Properties:
+      TemplateURL:  !Sub 'https://${S3Bucket}.s3.amazonaws.com/eksNodeGroup.yaml'
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        PermissionsBoundary: !Ref PermissionsBoundary
+        Subnet1: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.PrivateSubnet1Out, !Ref CustomerSubnetID1 ]
+        Subnet2: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.PrivateSubnet2Out, !Ref CustomerSubnetID2 ]
+        EksClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        ClusterSecurityGroupId: !GetAtt EKSControlPlaneStack.Outputs.ClusterSecurityGroupId
+
+  OperatorInstall:
+    Type: AWS::CloudFormation::Stack
+    Condition: EKSonEC2
+    DependsOn: EKSNodeGroupStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/falconOperator.yaml"
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        EksClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        FalconSensorType: !Ref FalconSensorType
+        FalconClientID: !Ref FalconClientID
+        FalconClientSecret: !Ref FalconClientSecret
+        PermissionsBoundary: !Ref PermissionsBoundary
+  
+  K8sProtectInstall:
+    Type: AWS::CloudFormation::Stack
+    Condition: EKSonEC2
+    DependsOn: EKSNodeGroupStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/falconK8sProtect.yaml"
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        CrowdStrikeCloud: !Ref CrowdStrikeCloud
+        EksClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        EKSClusterArn: !GetAtt EKSControlPlaneStack.Outputs.EKSClusterArn
+        FalconClientID: !Ref FalconClientID
+        FalconClientSecret: !Ref FalconClientSecret
+        FalconCID: !Ref FalconCID
+        DockerAPIToken: !Ref DockerAPIToken
+        PermissionsBoundary: !Ref PermissionsBoundary
+  
+  PrometheusMonitorInstall:
+    Type: AWS::CloudFormation::Stack
+    Condition: PrometheusEc2
+    DependsOn: EKSNodeGroupStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/prometheus.yaml"
+      Parameters:
+        EKSClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        PermissionsBoundary: !Ref PermissionsBoundary
+
+# EKS on Fargate Only
+  FargateStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: EKSonFargate
+    DependsOn: EKSControlPlaneStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/fargate.yaml"
+      Parameters:
+        PermissionsBoundary: !Ref PermissionsBoundary
+        EnvAlias: !Ref EnvAlias
+        ClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        Subnet1: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.PrivateSubnet1Out, !Ref CustomerSubnetID1 ]
+        Subnet2: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.PrivateSubnet2Out, !Ref CustomerSubnetID2 ]
+
+  OperatorInstallFargate:
+    Type: AWS::CloudFormation::Stack
+    Condition: EKSonFargate
+    DependsOn: FargateStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/falconOperator.yaml"
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        EksClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        FalconSensorType: !Ref FalconSensorType
+        FalconClientID: !Ref FalconClientID
+        FalconClientSecret: !Ref FalconClientSecret
+        PermissionsBoundary: !Ref PermissionsBoundary
+  
+  K8sProtectInstallFargate:
+    Type: AWS::CloudFormation::Stack
+    Condition: EKSonFargate
+    DependsOn: FargateStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/falconK8sProtect.yaml"
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        CrowdStrikeCloud: !Ref CrowdStrikeCloud
+        EksClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        EKSClusterArn: !GetAtt EKSControlPlaneStack.Outputs.EKSClusterArn
+        FalconClientID: !Ref FalconClientID
+        FalconClientSecret: !Ref FalconClientSecret
+        FalconCID: !Ref FalconCID
+        DockerAPIToken: !Ref DockerAPIToken
+        PermissionsBoundary: !Ref PermissionsBoundary
+  
+  PrometheusMonitorInstallFargate:
+    Type: AWS::CloudFormation::Stack
+    Condition: PrometheusFargate
+    DependsOn: FargateStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/prometheus.yaml"
+      Parameters:
+        EKSClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
+        PermissionsBoundary: !Ref PermissionsBoundary
+
+# Optional Bastion
+  BastionStack:
+    Condition: CreateBastionTrue
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://${S3Bucket}.s3.amazonaws.com/bastion.yaml'
+      Parameters:
+        EnvAlias: !Ref EnvAlias
+        KeyPairName: !Ref KeyPairName
+        RemoteAccessCIDR: !Ref RemoteAccessCIDR
+        BastionRole: !GetAtt IAMStack.Outputs.EKSAccessRoleName
+        VPCID: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.VPCIDOut, !Ref CustomerVPCID ]
+        VPCCIDR: !If [ CreateNewVPCTrue, !Ref NewVPCCIDR, !Ref CustomerVPCCIDR ]
+        S3Bucket: !Ref S3Bucket
+        DMZSubnetID: !If [ CreateNewVPCTrue, !GetAtt VPCStack.Outputs.DMZSubnet1Out, !Ref CustomerSubnetID3 ]
+        ControlPlaneSecurityGroupId: !GetAtt EKSControlPlaneStack.Outputs.ControlPlaneSecurityGroupId
+        EnvironmentVariables: !Sub "K8S_CLUSTER_NAME=${EKSControlPlaneStack.Outputs.UniqueClusterName}, K8S_CA_DATA=${EKSControlPlaneStack.Outputs.CAData}, K8S_VERSION=${KubernetesVersion}, K8S_ENDPOINT=${EKSControlPlaneStack.Outputs.EKSEndpoint}"

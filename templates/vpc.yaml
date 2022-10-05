@@ -1,0 +1,285 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates a VPC for the EKS Cluster'
+
+Parameters:
+  EnvAlias:
+    Type: String
+    Default: ''
+  PermissionsBoundary:
+    Type: String
+    Default: ''
+  NewVPCCIDR:
+    Description: 'If CreateNewVPC = true, set new VPC CIDR Range'
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/24
+    Default: 10.1.0.0/24
+    Type: String
+
+Conditions:
+  PermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundary, '' ] ]
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref NewVPCCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "Kubernetes VPC"
+
+# Private Network Components
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [ 0, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+      Tags:
+      - Key: kubernetes.io/role/internal-elb
+        Value: '1'
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/SubnetPrivate1"
+      VpcId:
+        Ref: VPC
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock: !Select [ 1, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+      Tags:
+      - Key: kubernetes.io/role/internal-elb
+        Value: '1'
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/SubnetPrivate2"
+      VpcId:
+        Ref: VPC
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - NATIP
+        - AllocationId
+      SubnetId:
+        Ref: "DMZSubnet1"
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/NATGateway"
+  NATIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/NATIP"
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/PrivateRouteTable1"
+      VpcId:
+        Ref: VPC
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/PrivateRouteTable2"
+      VpcId:
+        Ref: VPC
+  PrivateSubnet1Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateway
+      RouteTableId:
+        Ref: "PrivateRouteTable1"
+  PrivateSubnet2Route:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateway
+      RouteTableId:
+        Ref: "PrivateRouteTable2"
+  PrivateRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable1
+      SubnetId:
+        Ref: PrivateSubnet1
+  PrivateRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable2
+      SubnetId:
+        Ref: PrivateSubnet2
+
+# DMZ Network Components
+  DMZSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 0
+        - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock:  !Select [ 2, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: kubernetes.io/role/elb
+        Value: '1'
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/DMZsubnet1"
+      VpcId:
+        Ref: VPC
+  DMZSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - 1
+        - Fn::GetAZs: !Ref 'AWS::Region'
+      CidrBlock:  !Select [ 3, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: kubernetes.io/role/elb
+        Value: '1'
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/DMZsubnet2"
+      VpcId:
+        Ref: VPC
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/InternetGateway"  
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId:
+        Ref: InternetGateway
+      VpcId:
+        Ref: VPC
+  DMZRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          Fn::Sub: "${AWS::StackName}/DMZRouteTable"
+      VpcId:
+        Ref: VPC
+  DMZSubnetIGWRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+      RouteTableId:
+        Ref: DMZRouteTable
+    DependsOn:
+    - VPCGatewayAttachment
+  DMZRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: DMZRouteTable
+      SubnetId:
+        Ref: DMZSubnet1
+  DMZRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: DMZRouteTable
+      SubnetId:
+        Ref: DMZSubnet2
+
+#  FlowLog:
+#    Type: 'AWS::EC2::FlowLog'
+#    Properties:
+#      DeliverLogsPermissionArn: !GetAtt 'FlowLogRole.Arn'
+#      LogGroupName: !Join [ '', [ !Ref 'AWS::StackName', '-vpc-flow-log' ] ]
+#      ResourceId: !Ref VPC
+#      ResourceType: 'VPC'
+#      TrafficType: 'ALL'
+#  FlowLogGroup:
+#    Type: 'AWS::Logs::LogGroup'
+#    Properties:
+#      LogGroupName: !Join [ '', [ !Ref 'AWS::StackName', '-vpc-flow-log' ] ]
+#      RetentionInDays: 1
+#  FlowLogRole:
+#    Type: 'AWS::IAM::Role'
+#    Properties:
+#      PermissionsBoundary:
+#        Fn::If:
+#          - PermissionsBoundary
+#          - !Sub 'arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundary}'
+#          - Ref: AWS::NoValue
+#      AssumeRolePolicyDocument:
+#        Version: '2012-10-17'
+#        Statement:
+#          - Effect: Allow
+#            Principal:
+#              Service: 'vpc-flow-logs.amazonaws.com'
+#            Action: 'sts:AssumeRole'
+#      Policies:
+#        - PolicyName: 'flowlogs-policy'
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#              - Effect: Allow
+#                Action:
+#                  - 'logs:CreateLogGroup'
+#                  - 'logs:CreateLogStream'
+#                  - 'logs:PutLogEvents'
+#                  - 'logs:DescribeLogGroups'
+#                  - 'logs:DescribeLogStreams'
+#                Resource: !GetAtt 'LogGroup.Arn'
+
+Outputs:
+  VPCIDOut:
+    Value: !Ref VPC
+  VPCCIDROut:
+    Value: !Ref NewVPCCIDR
+
+  PrivateSubnet1Out:
+    Value: !Ref "PrivateSubnet1"
+  PrivateSubnet1CIDROut:
+    Value: !Select [ 0, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+
+  PrivateSubnet2Out:
+    Value: !Ref "PrivateSubnet2"
+  PrivateSubnet2CIDROut:
+    Value: !Select [ 1, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+
+  DMZSubnet1Out:
+    Value: !Ref "DMZSubnet1"
+  DMZSubnet1CIDROut:
+    Value: !Select [ 2, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+
+  DMZSubnet2Out:
+    Value: !Ref "DMZSubnet2"
+  DMZSubnet2CIDROut:
+    Value: !Select [ 3, !Cidr [ !Ref NewVPCCIDR, 4, 5 ]]
+
+  NATGatewayEIP:
+    Value: !Ref "NATIP"

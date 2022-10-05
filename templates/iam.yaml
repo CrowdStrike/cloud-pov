@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Creates shared IAM resources.
+
+Parameters:
+  PermissionsBoundary:
+    Type: String
+    Default: ''
+  EnvAlias:
+    Type: String
+    Default: ''
+  S3Bucket:
+    Type: String
+    Default: ''
+
+Conditions:
+  PermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundary, '' ] ]
+
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary:
+        Fn::If:
+          - PermissionsBoundary
+          - !Sub 'arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundary}'
+          - Ref: AWS::NoValue
+      MaxSessionDuration: 8400
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"  
+                - "resources.cloudformation.amazonaws.com"
+                - "hooks.cloudformation.amazonaws.com"
+            Action: sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: ResourceTypePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "eks:CreateCLuster"
+                  - "eks:DeleteCluster"
+                Resource: !Sub "arn:${AWS::Partition}:eks:${AWS::Region}:${AWS::AccountId}:cluster/${EnvAlias}-EKS-Cluster"
+              - Effect: Allow
+                Action:
+                  - "eks:Describe*"
+                  - "eks:List*"
+                  - "sts:AssumeRole"
+                  - "iam:PassRole"  
+                  - "iam:ListRolePolicies"
+                  - "iam:ListAttachedRolePolicies"
+                  - "iam:GetRole"
+                  - "iam:GetPolicy"
+                  - "iam:GetPolicyVersion"
+                  - "ec2:CreateNetworkInterface"
+                  - "ec2:DescribeNetworkInterfaces"
+                  - "ec2:DeleteNetworkInterface"
+                  - "ec2:DescribeVpcs"
+                  - "ec2:DescribeSubnets"
+                  - "ec2:DescribeRouteTables"
+                  - "ec2:DescribeSecurityGroups"
+                  - "logs:CreateLogGroup"  # required if this role is also used for Resource type logging
+                  - "logs:CreateLogStream"  # required if this role is also used for Resource type logging
+                  - "logs:DescribeLogGroups"  # required if this role is also used for Resource type logging
+                  - "logs:DescribeLogStreams"  # required if this role is also used for Resource type logging
+                  - "logs:PutLogEvents"  # required if this role is also used for Resource type logging
+                  - "cloudwatch:ListMetrics"  # required if this role is also used for Resource type logging
+                  - "cloudwatch:PutMetricData"  # required if this role is also used for Resource type logging
+                Resource: "*"
+
+  EKSAccessRole:
+    Type: "AWS::IAM::Role"
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks: [ EIAMPolicyWildcardResource ]
+          ignore_reasons:
+            EIAMPolicyWildcardResource: "resource does not exist at time of policy creation, so it's address is unkown"
+    Properties:
+      PermissionsBoundary:
+        Fn::If:
+          - PermissionsBoundary
+          - !Sub 'arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundary}'
+          - Ref: AWS::NoValue
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub "ec2.${AWS::URLSuffix}"
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: EKSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${S3Bucket}/*"
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - ecr:List*
+                  - ecr:Describe*
+                  - eks:List*
+                  - eks:Describe*
+                Resource: !Sub "arn:${AWS::Partition}:eks:${AWS::Region}:${AWS::AccountId}:cluster/${EnvAlias}-EKS-Cluster"
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2RoleforSSM'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
+
+# Activate CFT Extensions
+  ApplyResourceActivation:
+    Type: AWS::CloudFormation::TypeActivation
+    Properties:
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      LoggingConfig:
+        LogGroupName: cloudformation/registry/awsqs-kubernetes-resource
+        LogRoleArn: !GetAtt ExecutionRole.Arn
+      PublicTypeArn: !Sub arn:aws:cloudformation:${AWS::Region}::type/resource/408988dff9e863704bcc72e7e13f8d645cee8311/AWSQS-Kubernetes-Resource
+      Type: RESOURCE
+      TypeName: AWSQS::Kubernetes::ResourcePov
+      TypeNameAlias: AWSQS::Kubernetes::ResourcePov
+  HelmResourceActivation:
+      Type: AWS::CloudFormation::TypeActivation
+      Properties:
+        ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+        LoggingConfig:
+          LogGroupName: awsqs-kubernetes-helm-logs
+          LogRoleArn: !GetAtt ExecutionRole.Arn
+        PublicTypeArn: !Sub arn:aws:cloudformation:${AWS::Region}::type/resource/408988dff9e863704bcc72e7e13f8d645cee8311/AWSQS-Kubernetes-Helm
+        Type: RESOURCE
+        TypeName: AWSQS::Kubernetes::HelmPov
+        TypeNameAlias: AWSQS::Kubernetes::HelmPov
+  ClusterResourceActivation:
+      Type: AWS::CloudFormation::TypeActivation
+      Properties:
+        ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+        LoggingConfig:
+          LogGroupName: cloudformation/registry/awsqs-eks-cluster
+          LogRoleArn: !GetAtt ExecutionRole.Arn
+        PublicTypeArn: !Sub arn:aws:cloudformation:${AWS::Region}::type/resource/408988dff9e863704bcc72e7e13f8d645cee8311/AWSQS-EKS-Cluster
+        Type: RESOURCE
+        TypeName: AWSQS::EKS::ClusterPov
+        TypeNameAlias: AWSQS::EKS::ClusterPov
+
+Outputs:
+  EKSQSExtensionRoleArn:
+    Value: !GetAtt ExecutionRole.Arn
+  EKSAccessRoleName:
+    Description: EKS Access role name.
+    Value: !Ref EKSAccessRole

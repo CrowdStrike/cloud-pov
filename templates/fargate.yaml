@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  PermissionsBoundary:
+    Type: String
+    Default: ''
+  EnvAlias:
+    Type: String
+    Default: ''
+  ClusterName:
+    Type: String
+    Default: ''
+  Subnet1:
+    Type: String
+    Default: ''
+  Subnet2:
+    Type: String
+    Default: ''
+
+Conditions:
+  PermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundary, '' ] ]
+
+Resources:
+  FargateRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: CSFargatePodExecRole
+      PermissionsBoundary:
+        Fn::If:
+          - PermissionsBoundary
+          - !Sub 'arn:aws:iam::${AWS::AccountId}:policy/${PermissionsBoundary}'
+          - Ref: AWS::NoValue
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:aws:eks:${AWS::Region}:${AWS::AccountId}:fargateprofile/${ClusterName}/*'
+            Principal:
+              Service: eks-fargate-pods.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy'
+
+  FargateProfile:
+    Type: 'AWS::EKS::FargateProfile'
+    Properties:
+      FargateProfileName: cs-pov-fargate
+      ClusterName: !Ref ClusterName
+      PodExecutionRoleArn: !GetAtt FargateRole.Arn
+      Subnets:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      Selectors:
+        - Namespace: falcon-operator
+        - Namespace: falcon-kubernetes-protection
+        - Namespace: prometheus
+        - Namespace: falcon-detection-container
+
+  CoreDNSFargateProfile:
+    DependsOn: FargateProfile
+    Type: 'AWS::EKS::FargateProfile'
+    Properties:
+      FargateProfileName: coredns
+      ClusterName: !Ref ClusterName
+      PodExecutionRoleArn: !GetAtt FargateRole.Arn
+      Subnets:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      Selectors:
+        - Namespace: kube-system
+          Labels:
+          - Key: k8s-app
+            Value: kube-dns
