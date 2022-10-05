@@ -115,6 +115,13 @@ Parameters:
   RemoteAccessCIDR:
     Type: String
     Default: '1.1.1.1/32'
+  
+  # Optional detection-container
+  InstallDetectionContainer:
+    Type: String
+    AllowedValues: ['true','false']
+    Default: 'false'
+    Description: Install detection-container on EKS Cluster to produce endpoint detections.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -161,7 +168,7 @@ Metadata:
           - DockerAPIToken
       -
         Label:
-          default: "Monitoring Stack"
+          default: "Optional Monitoring Stack"
         Parameters:
           - InstallPrometheus
       -
@@ -171,6 +178,11 @@ Metadata:
           - CreateBastion
           - KeyPairName
           - RemoteAccessCIDR
+      -
+        Label:
+          default: "Optional Detection Container"
+        Parameters:
+          - InstallDetectionContainer
 
 Conditions:
   CreateNewVPCTrue: !Equals [ !Ref CreateNewVPC, 'true' ]
@@ -178,6 +190,9 @@ Conditions:
   CreateBastionTrue: !Equals [ !Ref CreateBastion, 'true' ]
   EKSonEC2: !Not [ !Equals [ !Ref EC2orFargate, 'Fargate' ] ]
   EKSonFargate: !Equals [ !Ref EC2orFargate, 'Fargate' ]
+  InstallDetectionContainer: !Equals [ !Ref InstallDetectionContainer, 'true' ]
+  DetectionContainerOnEC2: !And [ !Condition EKSonEC2, !Condition InstallDetectionContainer ]
+  DetectionContainerOnFargate: !And [ !Condition EKSonFargate, !Condition InstallDetectionContainer ]
   PrometheusEc2:
     Fn::And:
     - Condition: InstallPrometheus
@@ -277,6 +292,15 @@ Resources:
       Parameters:
         EKSClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
         PermissionsBoundary: !Ref PermissionsBoundary
+  
+  DetectionContainerInstall:
+    Type: AWS::CloudFormation::Stack
+    Condition: DetectionContainerOnEC2
+    DependsOn: EKSNodeGroupStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/detectionContainer.yaml"
+      Parameters:
+        EKSClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
 
 # EKS on Fargate Only
   FargateStack:
@@ -332,6 +356,15 @@ Resources:
       Parameters:
         EKSClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
         PermissionsBoundary: !Ref PermissionsBoundary
+  
+  DetectionContainerInstallFargate:
+    Type: AWS::CloudFormation::Stack
+    Condition: DetectionContainerOnFargate
+    DependsOn: FargateStack
+    Properties:
+      TemplateURL: !Sub "https://${S3Bucket}.s3.amazonaws.com/detectionContainer.yaml"
+      Parameters:
+        EKSClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
 
 # Optional Bastion
   BastionStack:

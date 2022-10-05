@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Deploy detection-container using CloudFormation to existing EKS cluster"
+
+Metadata:
+  cfn-lint: { config: { ignore_checks: [W9002, W9003, W9004, W9006, E9007, E9008] } }
+
+Parameters:
+  EKSClusterName:
+    Type: String
+    Default: ''
+
+Resources:
+  InstallDetectionContainer:
+    Type: "AWSQS::Kubernetes::ResourcePov"
+    Properties:
+      ClusterName: !Ref EKSClusterName
+      Namespace: detection-container
+      Manifest: !Sub |
+        ---
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: detection-container
+          labels:
+            name: detection-container
+
+        ---
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: detection-container
+          namespace: detection-container
+          labels:
+            app: detection-container
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: detection-container
+          template:
+            metadata:
+              labels:
+                app: detection-container
+            spec:
+              containers:
+              - name: detection-container
+                image: quay.io/crowdstrike/detection-container
+                imagePullPolicy: Always
