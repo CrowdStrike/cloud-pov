@@ -48,8 +48,6 @@ Parameters:
     Type: String
 
 Resources:
-  BastionMainLogGroup:
-    Type: AWS::Logs::LogGroup
 
   BastionEIP:
     Type: AWS::EC2::EIP
@@ -66,7 +64,17 @@ Resources:
         FromPort: 0
         ToPort: 65535
         CidrIp: !Ref VPCCIDR
-  
+
+  RemoteToBastion:
+    Type: "AWS::EC2::SecurityGroupIngress"
+    Properties:
+      Description: Allow Remote IP to communicate with the Bastion server 
+      GroupId: !Ref BastionSG
+      CidrIp: !Ref RemoteAccessCIDR
+      IpProtocol: tcp
+      ToPort: 22
+      FromPort: 22
+
   BastionToAPIServerAccess:
     Type: "AWS::EC2::SecurityGroupIngress"
     Properties:
@@ -76,7 +84,7 @@ Resources:
       IpProtocol: tcp
       ToPort: 443
       FromPort: 443
-  
+
   BastionHostProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -124,9 +132,6 @@ Resources:
 Outputs:
   BastionEIP:
     Value: !Ref BastionEIP
-  CloudWatchLogs:
-    Description: CloudWatch Logs GroupName. Your SSH logs will be stored here.
-    Value: !Ref BastionMainLogGroup
   BastionSecurityGroupID:
     Description: Bastion security group ID.
     Value: !Ref BastionSG
