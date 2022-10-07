@@ -1,8 +1,8 @@
-# gtm-eks-pov
+# CrowdStrike - AWS EKS POV
 
 ## Launching the Stack
 
-  1. Upload contents of /templates to an S3 Bucket in your AWS Account
+  1. Upload contents of /templates to the root of an S3 Bucket in your AWS Account
   2. Copy the Object URL for entry.yaml
   3. In CloudFormation, Create Stack with New Resources
   4. Choose Template is Ready and Amazon S3 URL
@@ -13,32 +13,27 @@
 
 ### Prerequisites
 - EnvAlias: this will be appended to most created resources for identification
-- S3Bucket: this is the S3 Bucket name where you uploaded the templates
-- PermissionBoundary: this is the permission boundary name if required.  For example, when launching in a CloudShare account, this value should be BoundaryForAdministratorAccess
+- S3BucketName: this is the S3 Bucket Name where you uploaded the templates
+- PermissionBoundary: Permission Boundary for IAM entities if required
 
 ### EKS and Sensor Details
 - EC2orFargate: choose whether to launch EKS Nodes on EC2, Fargate or Both
-- KubernetesVersion: leave as default, but can change when required
+- KubernetesVersion: Kubernetes control plane version
 - FalconSensorType: NodeSensor or ContainerSensor. Note: ContainerSensor is required here if EC2orFargate = Fargate
 
 ### Create New VPC
-- CreateNewVPC: Leave as True unless you are creating a new VPC
-- NewVPCCIDR: Leave as default, if changed make sure it is still a /24
+- CreateNewVPC: Select true to create a new VPC with 4 Subnets, NAT, IGW.
+- NewVPCCIDR: CIDR range for new VPC, must be at least /24
 
-### Use Customer VPC (Optional, skip if CreateNewVPC = True)
-- CustomerVPCID: The ID of the VPC to launch resources in
-- CustomerVPCCIDR: The CIDR of the VPC to launch resources in
-- CustomerSubnetID1: Subnet 1 of the VPC to launch eks in
-- CustomerSubnetID2: Subnet 2 of the VPC to launch eks in
-- CustomerSubnetID3: Subnet of the VPC to launch Bastion in
+### Use Existing VPC (Optional, skip if CreateNewVPC = True)
+- ExistingVPCID: The ID of the VPC to launch resources in
+- ExistingVPCCIDR: The CIDR of the VPC to launch resources in
+- ExistingSubnetID1: Subnet 1 of the VPC to launch eks in
+- ExistingSubnetID2: Subnet 2 of the VPC to launch eks in
+- ExistingSubnetID3: Subnet of the VPC to launch Bastion in
 
 ### Configure Falcon Keys
-- FalconCID: must be lower case and do not include last three chars. This can be completed easily with the following commands in your terminal or bash shell.
-```bash
-myCID="<Enter your CID here>"
-myNewCID=$(echo $myCID | cut -c -32 | tr '[:upper:]' '[:lower:]')
-echo $myNewCID
-```
+- FalconCID: must be lower case and do not include last three chars. This can be retrieved when you generate the DockerAPIToken.
 - CrowdStrikeCloud: Acceptable values include us-1, us-2 or eu-1
 - FalconClientID: Your Falcon API Client ID
 - FalconClientSecret: Your Falcon API Client Secret
