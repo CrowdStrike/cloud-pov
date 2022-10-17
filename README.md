@@ -22,15 +22,7 @@
 - FalconSensorType: NodeSensor or ContainerSensor. Note: ContainerSensor is required here if EC2orFargate = Fargate
 
 ### Create New VPC
-- CreateNewVPC: Select true to create a new VPC with 4 Subnets, NAT, IGW.
 - NewVPCCIDR: CIDR range for new VPC, must be at least /24
-
-### Use Existing VPC (Optional, skip if CreateNewVPC = True)
-- ExistingVPCID: The ID of the VPC to launch resources in
-- ExistingVPCCIDR: The CIDR of the VPC to launch resources in
-- ExistingSubnetID1: Subnet 1 of the VPC to launch eks in
-- ExistingSubnetID2: Subnet 2 of the VPC to launch eks in
-- ExistingSubnetID3: Subnet of the VPC to launch Bastion in
 
 ### Configure Falcon Keys
 - FalconCID: must be lower case and do not include last three chars. This can be retrieved when you generate the DockerAPIToken.
