@@ -6,6 +6,9 @@ Parameters:
   EnvAlias:
     Type: String
     Default: ''
+  EnvID:
+    Type: String
+    Default: ''
   PermissionsBoundary:
     Type: String
     Default: ''
@@ -61,29 +64,29 @@ Resources:
         - ResourceType: instance
           Tags:
           - Key: Name
-            Value: k8s-cs-pov-node
+            Value: !Sub "${EnvAlias}-node-${EnvID}"
           - Key: alpha.eksctl.io/nodegroup-name
-            Value: ng-fffe2ff7
+            Value: !Sub "${EnvAlias}-ng-${EnvID}"
           - Key: alpha.eksctl.io/nodegroup-type
             Value: managed
         - ResourceType: volume
           Tags:
           - Key: Name
-            Value: k8s-cs-pov-node
+            Value: !Sub "${EnvAlias}-node-${EnvID}"
           - Key: alpha.eksctl.io/nodegroup-name
-            Value: ng-fffe2ff7
+            Value: !Sub "${EnvAlias}-ng-${EnvID}"
           - Key: alpha.eksctl.io/nodegroup-type
             Value: managed
         - ResourceType: network-interface
           Tags:
           - Key: Name
-            Value: k8s-cs-pov-node
+            Value: !Sub "${EnvAlias}-node-${EnvID}"
           - Key: alpha.eksctl.io/nodegroup-name
-            Value: ng-fffe2ff7
+            Value: !Sub "${EnvAlias}-ng-${EnvID}"
           - Key: alpha.eksctl.io/nodegroup-type
             Value: managed
       LaunchTemplateName:
-        Fn::Sub: "${AWS::StackName}"
+        Fn::Sub: "${EnvAlias}-launch-template-${EnvID}"
 
   ManagedNodeGroup:
     Type: AWS::EKS::Nodegroup
@@ -94,7 +97,7 @@ Resources:
       - m5.large
       Labels:
         alpha.eksctl.io/cluster-name: !Ref EksClusterName
-        alpha.eksctl.io/nodegroup-name: ng-fffe2ff7
+        alpha.eksctl.io/nodegroup-name: !Sub "${EnvAlias}-ng-${EnvID}"
       LaunchTemplate:
         Id:
           Ref: LaunchTemplate
@@ -103,7 +106,7 @@ Resources:
         - NodeInstanceRole
         - Arn
       ReleaseVersion: 1.21.12-20220523
-      NodegroupName: ng-fffe2ff7
+      NodegroupName: !Sub "${EnvAlias}-ng-${EnvID}"
       ScalingConfig:
         DesiredSize: 2
         MaxSize: 2
@@ -112,12 +115,13 @@ Resources:
         - !Ref Subnet1
         - !Ref Subnet2
       Tags:
-        alpha.eksctl.io/nodegroup-name: ng-fffe2ff7
+        alpha.eksctl.io/nodegroup-name: !Sub "${EnvAlias}-ng-${EnvID}"
         alpha.eksctl.io/nodegroup-type: managed
 
   NodeInstanceRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${EnvAlias}-node-role-${EnvID}"
       PermissionsBoundary:
         Fn::If:
           - PermissionsBoundary
@@ -140,10 +144,6 @@ Resources:
       - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy
       - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy
       Path: "/"
-      Tags:
-      - Key: Name
-        Value:
-          !Sub '${EnvAlias}-Node-InstanceRole'
 
 Outputs:
   EKSNodeSecurityGroup:

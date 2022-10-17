@@ -2,6 +2,7 @@ function setup_environment_variables() {
     region=$(curl -sq http://169.254.169.254/latest/meta-data/placement/availability-zone/)
     region=${region: :-1}
     accountId=$(aws sts get-caller-identity | jq -r .Account)
+    #CS_CID_LOWER=$(echo $CS_CID | cut -d '-' -f 1 | tr '[:upper:]' '[:lower:]')
 }
 
 function install_kubernetes_client_tools() {
@@ -76,6 +77,122 @@ EOF
     chown -R ssm-user:ssm-user /home/ssm-user/.kube/
 }
 
+function install_operator(){
+  printf "\nInstalling Operator...\n"
+  wget https://raw.githubusercontent.com/CrowdStrike/falcon-operator/main/deploy/falcon-operator.yaml -P /tmp/
+  kubectl apply --kubeconfig /home/ec2-user/.kube/config -f /tmp/falcon-operator.yaml
+}
+
+function install_nodesensor(){
+    cat >/tmp/node_sensor.yaml <<EOF
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconNodeSensor
+metadata:
+  name: falcon-node-sensor
+spec:
+  falcon_api:
+    client_id: ${CS_CLIENT_ID}
+    client_secret: ${CS_CLIENT_SECRET}
+    cloud_region: autodiscover
+  node: {}
+  falcon:
+    tags: 
+    - DevDays-CNAP
+EOF
+    printf "\nInstalling Node Sensor...\n"
+    kubectl apply --kubeconfig /home/ec2-user/.kube/config -f /tmp/node_sensor.yaml
+}
+
+function install_containersensor(){
+    cat >/tmp/container_sensor.yaml <<EOF
+apiVersion: falcon.crowdstrike.com/v1alpha1
+kind: FalconContainer
+metadata:
+  name: falcon-container
+spec:
+  falcon_api:
+    client_id: ${CS_CLIENT_ID}
+    client_secret: ${CS_CLIENT_SECRET}
+    cloud_region: autodiscover
+  registry:
+    type: crowdstrike
+  installer_args:
+    - '-falconctl-opts'
+    - '--tags=DevDays-CNAP'
+EOF
+    printf "\nInstalling Container Sensor...\n"
+    kubectl apply --kubeconfig /home/ec2-user/.kube/config -f /tmp/container_sensor.yaml
+}
+
+function install_k8s_agent(){
+    cat >/tmp/k8s_agent_config.yaml <<EOF
+crowdstrikeConfig:
+  clientID: ${CS_CLIENT_ID}
+  clientSecret: ${CS_CLIENT_SECRET}
+  clusterName: ${K8S_CLUSTER_NAME}
+  env: ${CS_ENV}
+  cid: ${CS_CID}
+  dockerAPIToken: ${DOCKER_API_TOKEN}
+EOF
+    printf "\nAdd kpagent Repo\n"
+    helm repo add kpagent-helm https://registry.crowdstrike.com/kpagent-helm && helm repo update
+    printf "\nInstalling K8S Protection Agent...\n"
+    helm upgrade --install -f /tmp/k8s_agent_config.yaml --kubeconfig /home/ec2-user/.kube/config --create-namespace -n falcon-kubernetes-protection kpagent kpagent-helm/cs-k8s-protection-agent
+}
+
+function deploy_detection_container(){
+    cat >/tmp/detection_container.yaml <<EOF
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: detection-container
+  labels:
+    name: detection-container
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: detection-container
+  namespace: detection-container
+  labels:
+    app: detection-container
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: detection-container
+  template:
+    metadata:
+      labels:
+        app: detection-container
+    spec:
+      containers:
+      - name: detection-container
+        image: quay.io/crowdstrike/detection-container
+        imagePullPolicy: Always
+EOF
+    printf "\nDeploy Detection Container...\n"
+    kubectl apply --kubeconfig /home/ec2-user/.kube/config -f /tmp/detection_container.yaml
+}
+
+
 setup_environment_variables
 install_kubernetes_client_tools
 setup_kubeconfig
+install_operator
+
+if [[ $CS_SENSOR_TYPE = "FalconNodeSensor" ]]
+then
+  install_nodesensor
+else
+  install_containersensor
+fi
+
+install_k8s_agent
+
+if [[ $DETECTION_CONTAINER = "true" ]]
+then
+  deploy_detection_container
+fi

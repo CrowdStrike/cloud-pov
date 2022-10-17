@@ -6,6 +6,9 @@ Parameters:
   EnvAlias:
     Type: String
     Default: ''
+  EnvID:
+    Type: String
+    Default: ''
   PermissionsBoundary:
     Type: String
     Default: ''
@@ -39,12 +42,13 @@ Resources:
       GroupDescription: Communication between all nodes in the cluster
       Tags:
       - Key: Name
-        Value: !Sub '${EnvAlias}-EKS-Cluster-SG'
+        Value: !Sub '${EnvAlias}-node-sg-${EnvID}'
       VpcId:
         Ref: VPCID
   serviceRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${EnvAlias}-eks-svc-role-${EnvID}"
       PermissionsBoundary:
         Fn::If:
           - PermissionsBoundary
@@ -62,13 +66,13 @@ Resources:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEKSServicePolicy'
 
   Cluster:
-    Type: AWSQS::EKS::ClusterPov
+    Type: AWSQS::EKS::ClusterPOV
     Metadata:
       cfn-lint:
         config:
           ignore_checks: [ E3001 ]
     Properties:
-      Name: !Sub '${EnvAlias}-EKS-Cluster'
+      Name: !Sub "${EnvAlias}-eks-cluster-${EnvID}"
       ResourcesVpcConfig:
         EndpointPrivateAccess: true
         EndpointPublicAccess: true
@@ -113,7 +117,7 @@ Resources:
       GroupDescription: Communication between the control plane and worker nodegroups
       Tags:
       - Key: Name
-        Value: !Sub "${EnvAlias}-ControlPlaneSecurityGroup"
+        Value: !Sub '${EnvAlias}-eks-control-sg-${EnvID}'
       VpcId:
         Ref: VPCID
   
@@ -169,7 +173,7 @@ Resources:
           Resource: "*"
         Version: '2012-10-17'
       PolicyName:
-        Fn::Sub: "${AWS::StackName}-PolicyCloudWatchMetrics"
+        Fn::Sub: "${EnvAlias}-cw-metrics-pol-${EnvID}"
       Roles:
       - Ref: serviceRole
   
@@ -186,7 +190,7 @@ Resources:
           Resource: "*"
         Version: '2012-10-17'
       PolicyName:
-        Fn::Sub: "${AWS::StackName}-PolicyELBPermissions"
+        Fn::Sub: "${EnvAlias}-elb-pol-${EnvID}"
       Roles:
       - Ref: serviceRole
 

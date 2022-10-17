@@ -8,6 +8,9 @@ Parameters:
   EnvAlias:
     Type: String
     Default: ''
+  EnvID:
+    Type: String
+    Default: ''
   S3Bucket:
     Type: String
     Default: ''
@@ -19,6 +22,7 @@ Resources:
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub "${EnvAlias}-cft-exec-role-${EnvID}"
       PermissionsBoundary:
         Fn::If:
           - PermissionsBoundary
@@ -45,7 +49,7 @@ Resources:
                 Action:
                   - "eks:CreateCLuster"
                   - "eks:DeleteCluster"
-                Resource: !Sub "arn:${AWS::Partition}:eks:${AWS::Region}:${AWS::AccountId}:cluster/${EnvAlias}-EKS-Cluster"
+                Resource: !Sub "arn:${AWS::Partition}:eks:${AWS::Region}:${AWS::AccountId}:cluster/${EnvAlias}-eks-cluster-${EnvID}"
               - Effect: Allow
                 Action:
                   - "eks:Describe*"
@@ -82,6 +86,7 @@ Resources:
           ignore_reasons:
             EIAMPolicyWildcardResource: "resource does not exist at time of policy creation, so it's address is unkown"
     Properties:
+      RoleName: !Sub "${EnvAlias}-eks-access-role-${EnvID}"
       PermissionsBoundary:
         Fn::If:
           - PermissionsBoundary
@@ -109,24 +114,12 @@ Resources:
                   - ecr:Describe*
                   - eks:List*
                   - eks:Describe*
-                Resource: !Sub "arn:${AWS::Partition}:eks:${AWS::Region}:${AWS::AccountId}:cluster/${EnvAlias}-EKS-Cluster"
+                Resource: !Sub "arn:${AWS::Partition}:eks:${AWS::Region}:${AWS::AccountId}:cluster/${EnvAlias}-eks-cluster-${EnvID}"
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2RoleforSSM'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
-
-# Activate CFT Extensions
-  ApplyResourceActivation:
-    Type: AWS::CloudFormation::TypeActivation
-    Properties:
-      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
-      LoggingConfig:
-        LogGroupName: cloudformation/registry/awsqs-kubernetes-resource
-        LogRoleArn: !GetAtt ExecutionRole.Arn
-      PublicTypeArn: !Sub arn:aws:cloudformation:${AWS::Region}::type/resource/408988dff9e863704bcc72e7e13f8d645cee8311/AWSQS-Kubernetes-Resource
-      Type: RESOURCE
-      TypeName: AWSQS::Kubernetes::ResourcePov
-      TypeNameAlias: AWSQS::Kubernetes::ResourcePov
+        
   HelmResourceActivation:
       Type: AWS::CloudFormation::TypeActivation
       Properties:
@@ -136,8 +129,8 @@ Resources:
           LogRoleArn: !GetAtt ExecutionRole.Arn
         PublicTypeArn: !Sub arn:aws:cloudformation:${AWS::Region}::type/resource/408988dff9e863704bcc72e7e13f8d645cee8311/AWSQS-Kubernetes-Helm
         Type: RESOURCE
-        TypeName: AWSQS::Kubernetes::HelmPov
-        TypeNameAlias: AWSQS::Kubernetes::HelmPov
+        TypeName: AWSQS::Kubernetes::HelmPOV
+        TypeNameAlias: AWSQS::Kubernetes::HelmPOV
   ClusterResourceActivation:
       Type: AWS::CloudFormation::TypeActivation
       Properties:
@@ -147,8 +140,8 @@ Resources:
           LogRoleArn: !GetAtt ExecutionRole.Arn
         PublicTypeArn: !Sub arn:aws:cloudformation:${AWS::Region}::type/resource/408988dff9e863704bcc72e7e13f8d645cee8311/AWSQS-EKS-Cluster
         Type: RESOURCE
-        TypeName: AWSQS::EKS::ClusterPov
-        TypeNameAlias: AWSQS::EKS::ClusterPov
+        TypeName: AWSQS::EKS::ClusterPOV
+        TypeNameAlias: AWSQS::EKS::ClusterPOV
 
 Outputs:
   EKSQSExtensionRoleArn:

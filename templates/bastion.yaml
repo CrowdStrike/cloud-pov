@@ -9,6 +9,9 @@ Parameters:
   EnvAlias:
     Type: String
     Default: ''
+  EnvID:
+    Type: String
+    Default: ''
   KeyPairName:
     Type: String
     Default: ''
@@ -110,7 +113,7 @@ Resources:
           DeleteOnTermination: true
       Tags: 
         - Key: 'Name'
-          Value: !Sub '${EnvAlias}-Bastion'
+          Value: !Sub '${EnvAlias}-Bastion-${EnvID}'
       UserData:
         Fn::Base64:
           !Sub |
@@ -122,7 +125,7 @@ Resources:
             done
             export PATH=$PATH:/usr/local/bin
             #install prereqs
-            yum install -y jq
+            yum install -y jq wget
             #get and run setup 
             cd /tmp
             aws s3 cp s3://${S3Bucket}/bastionSetup.sh bastionSetup.sh

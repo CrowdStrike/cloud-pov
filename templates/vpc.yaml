@@ -6,6 +6,9 @@ Parameters:
   EnvAlias:
     Type: String
     Default: ''
+  EnvID:
+    Type: String
+    Default: ''
   PermissionsBoundary:
     Type: String
     Default: ''
@@ -29,7 +32,7 @@ Resources:
       Tags:
       - Key: Name
         Value:
-          Fn::Sub: "Kubernetes VPC"
+          Fn::Sub: "${EnvAlias}-vpc-${EnvID}"
 
 # Private Network Components
   PrivateSubnet1:
@@ -44,7 +47,7 @@ Resources:
         Value: '1'
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/SubnetPrivate1"
+          Fn::Sub: "${EnvAlias}-private-sub1-${EnvID}"
       VpcId:
         Ref: VPC
   PrivateSubnet2:
@@ -59,7 +62,7 @@ Resources:
         Value: '1'
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/SubnetPrivate2"
+          Fn::Sub: "${EnvAlias}-private-sub2-${EnvID}"
       VpcId:
         Ref: VPC
   NATGateway:
@@ -74,7 +77,7 @@ Resources:
       Tags:
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/NATGateway"
+          Fn::Sub: "${EnvAlias}-nat-${EnvID}"
   NATIP:
     Type: AWS::EC2::EIP
     Properties:
@@ -82,14 +85,14 @@ Resources:
       Tags:
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/NATIP"
+          Fn::Sub: "${EnvAlias}-natip-${EnvID}"
   PrivateRouteTable1:
     Type: AWS::EC2::RouteTable
     Properties:
       Tags:
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/PrivateRouteTable1"
+          Fn::Sub: "${EnvAlias}-private-rt1-${EnvID}"
       VpcId:
         Ref: VPC
   PrivateRouteTable2:
@@ -98,7 +101,7 @@ Resources:
       Tags:
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/PrivateRouteTable2"
+          Fn::Sub: "${EnvAlias}-private-rt2-${EnvID}"
       VpcId:
         Ref: VPC
   PrivateSubnet1Route:
@@ -146,7 +149,7 @@ Resources:
         Value: '1'
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/DMZsubnet1"
+          Fn::Sub: "${EnvAlias}-dmz-sub1-${EnvID}"
       VpcId:
         Ref: VPC
   DMZSubnet2:
@@ -162,7 +165,7 @@ Resources:
         Value: '1'
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/DMZsubnet2"
+          Fn::Sub: "${EnvAlias}-dmz-sub2-${EnvID}"
       VpcId:
         Ref: VPC
   InternetGateway:
@@ -171,7 +174,7 @@ Resources:
       Tags:
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/InternetGateway"  
+          Fn::Sub: "${EnvAlias}-igw-${EnvID}" 
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
@@ -185,7 +188,7 @@ Resources:
       Tags:
       - Key: Name
         Value:
-          Fn::Sub: "${AWS::StackName}/DMZRouteTable"
+          Fn::Sub: "${EnvAlias}-dmz-rt-${EnvID}"
       VpcId:
         Ref: VPC
   DMZSubnetIGWRoute:

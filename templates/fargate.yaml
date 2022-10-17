@@ -6,6 +6,9 @@ Parameters:
   EnvAlias:
     Type: String
     Default: ''
+  EnvID:
+    Type: String
+    Default: ''
   ClusterName:
     Type: String
     Default: ''
@@ -23,7 +26,7 @@ Resources:
   FargateRole:
     Type: "AWS::IAM::Role"
     Properties:
-      RoleName: CSFargatePodExecRole
+      RoleName: !Sub "${EnvAlias}-fargate-role-${EnvID}"
       PermissionsBoundary:
         Fn::If:
           - PermissionsBoundary
@@ -45,7 +48,7 @@ Resources:
   FargateProfile:
     Type: 'AWS::EKS::FargateProfile'
     Properties:
-      FargateProfileName: cs-pov-fargate
+      FargateProfileName: !Sub "${EnvAlias}-fargate-profile-${EnvID}"
       ClusterName: !Ref ClusterName
       PodExecutionRoleArn: !GetAtt FargateRole.Arn
       Subnets:
@@ -62,7 +65,7 @@ Resources:
     DependsOn: FargateProfile
     Type: 'AWS::EKS::FargateProfile'
     Properties:
-      FargateProfileName: coredns
+      FargateProfileName: !Sub "${EnvAlias}-fargate-coredns-${EnvID}"
       ClusterName: !Ref ClusterName
       PodExecutionRoleArn: !GetAtt FargateRole.Arn
       Subnets:

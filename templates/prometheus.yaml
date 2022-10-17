@@ -17,7 +17,7 @@ Conditions:
 
 Resources:
   InstallPrometheus:
-    Type: "AWSQS::Kubernetes::HelmPov"
+    Type: AWSQS::Kubernetes::HelmPOV
     Properties:
       ClusterID: !Ref EKSClusterName
       Name: prometheus
