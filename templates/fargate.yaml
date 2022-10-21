@@ -18,8 +18,12 @@ Parameters:
   Subnet2:
     Type: String
     Default: ''
+  InstallPrometheus:
+    Type: String
+    Default: 'false'
 
 Conditions:
+  InstallPrometheus: !Equals [ !Ref InstallPrometheus, 'true' ]
   PermissionsBoundary: !Not [ !Equals [ !Ref PermissionsBoundary, '' ] ]
 
 Resources:
@@ -57,8 +61,8 @@ Resources:
       Selectors:
         - Namespace: falcon-operator
         - Namespace: falcon-kubernetes-protection
-        - Namespace: prometheus
-        - Namespace: falcon-detection-container
+        - Namespace: falcon-system
+        - Namespace: falcon-system-configure
         - Namespace: detection-container
 
   CoreDNSFargateProfile:
@@ -76,3 +80,16 @@ Resources:
           Labels:
           - Key: k8s-app
             Value: kube-dns
+
+  PrometheusProfile:
+    DependsOn: CoreDNSFargateProfile
+    Type: 'AWS::EKS::FargateProfile'
+    Properties:
+      FargateProfileName: !Sub "${EnvAlias}-fargate-prometheus-${EnvID}"
+      ClusterName: !Ref ClusterName
+      PodExecutionRoleArn: !GetAtt FargateRole.Arn
+      Subnets:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      Selectors:
+        - Namespace: prometheus

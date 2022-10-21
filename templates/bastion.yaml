@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Linux Bastion Instance k8s and helm installed for Falcon CNAP Workshop.  During boot, bastionSetup.sh will run in userdata to install packages, configure k8s and install the CrowdStrike Protection Agent on your EKS cluster.'
+Description: 'Linux Bastion Instance k8s and helm installed.  During boot, bastionSetup.sh will run in userdata to install packages, configure k8s and install the CrowdStrike Operator, Protection Agent and sensors on your EKS cluster.'
 
 Parameters:
   S3Bucket:

@@ -263,6 +263,7 @@ Resources:
         ClusterName: !GetAtt EKSControlPlaneStack.Outputs.UniqueClusterName
         Subnet1: !GetAtt VPCStack.Outputs.PrivateSubnet1Out
         Subnet2: !GetAtt VPCStack.Outputs.PrivateSubnet2Out
+        InstallPrometheus: !Ref InstallPrometheus
 
   PrometheusMonitorInstallFargate:
     Type: AWS::CloudFormation::Stack
@@ -291,4 +292,4 @@ Resources:
         S3Bucket: !Ref S3BucketName
         DMZSubnetID: !GetAtt VPCStack.Outputs.DMZSubnet1Out
         ControlPlaneSecurityGroupId: !GetAtt EKSControlPlaneStack.Outputs.ControlPlaneSecurityGroupId
-        EnvironmentVariables: !Sub "DETECTION_CONTAINER=${InstallDetectionContainer}, CS_CLIENT_ID=${FalconClientID}, CS_CLIENT_SECRET=${FalconClientSecret}, CS_ENV=${CrowdStrikeCloud}, CS_CID=${FalconCID}, DOCKER_API_TOKEN=${DockerAPIToken}, CS_SENSOR_TYPE=${FalconSensorType}, K8S_CLUSTER_NAME=${EKSControlPlaneStack.Outputs.UniqueClusterName}, K8S_CA_DATA=${EKSControlPlaneStack.Outputs.CAData}, K8S_VERSION=${KubernetesVersion}, K8S_ENDPOINT=${EKSControlPlaneStack.Outputs.EKSEndpoint}"
+        EnvironmentVariables: !Sub "EC2_OR_FARGATE=${EC2orFargate}, DETECTION_CONTAINER=${InstallDetectionContainer}, CS_CLIENT_ID=${FalconClientID}, CS_CLIENT_SECRET=${FalconClientSecret}, CS_ENV=${CrowdStrikeCloud}, CS_CID=${FalconCID}, DOCKER_API_TOKEN=${DockerAPIToken}, CS_SENSOR_TYPE=${FalconSensorType}, K8S_CLUSTER_NAME=${EKSControlPlaneStack.Outputs.UniqueClusterName}, K8S_CA_DATA=${EKSControlPlaneStack.Outputs.CAData}, K8S_VERSION=${KubernetesVersion}, K8S_ENDPOINT=${EKSControlPlaneStack.Outputs.EKSEndpoint}"

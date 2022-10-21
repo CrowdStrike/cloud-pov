@@ -77,6 +77,16 @@ EOF
     chown -R ssm-user:ssm-user /home/ssm-user/.kube/
 }
 
+function patch_coredns(){
+  printf "\nPatching CoreDNS Pods...\n"
+  kubectl patch deployment coredns \
+    --kubeconfig /home/ec2-user/.kube/config \
+    -n kube-system \
+    --type json \
+    -p='[{"op": "remove", "path": "/spec/template/metadata/annotations/eks.amazonaws.com~1compute-type"}]'
+  kubectl rollout restart --kubeconfig /home/ec2-user/.kube/config -n kube-system deployment coredns
+}
+
 function install_operator(){
   printf "\nInstalling Operator...\n"
   wget https://raw.githubusercontent.com/CrowdStrike/falcon-operator/main/deploy/falcon-operator.yaml -P /tmp/
@@ -97,7 +107,7 @@ spec:
   node: {}
   falcon:
     tags: 
-    - DevDays-CNAP
+    - cs-pov
 EOF
     printf "\nInstalling Node Sensor...\n"
     kubectl apply --kubeconfig /home/ec2-user/.kube/config -f /tmp/node_sensor.yaml
@@ -117,8 +127,8 @@ spec:
   registry:
     type: crowdstrike
   installer_args:
-    - '-falconctl-opts'
-    - '--tags=DevDays-CNAP'
+    - -falconctl-opts
+    - --tags=cs-pov
 EOF
     printf "\nInstalling Container Sensor...\n"
     kubectl apply --kubeconfig /home/ec2-user/.kube/config -f /tmp/container_sensor.yaml
@@ -181,6 +191,14 @@ EOF
 setup_environment_variables
 install_kubernetes_client_tools
 setup_kubeconfig
+
+if [[ $EC2_OR_FARGATE = "Fargate" ]]
+then
+  patch_coredns
+fi
+
+sleep 20
+
 install_operator
 
 if [[ $CS_SENSOR_TYPE = "FalconNodeSensor" ]]
