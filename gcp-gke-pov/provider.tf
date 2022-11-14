@@ -17,8 +17,8 @@ provider "google" {
 }
 
 provider "kubectl" {
-  host                   = module.gke.cluster-endpoint
-  cluster_ca_certificate = base64decode(module.gke.cluster-ca-certificate)
-  token = module.gke.gke-token
+  host                   = module.gke.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.gke.cluster_ca_certificate)
+  token = module.gke.gke_token
   load_config_file       = false
 }
