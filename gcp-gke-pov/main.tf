@@ -1,5 +1,5 @@
 module "network" {
-    source = "github.com/ryanjpayne/cs-tf-modules/gcp/network"
+    source = "https://github.com/CrowdStrike/terraform-modules/tree/main/gcp/network"
     
     alias  = var.alias
     region = var.region
@@ -13,7 +13,7 @@ module "network" {
 }
 
 module "gke" {
-    source = "github.com/ryanjpayne/cs-tf-modules/gcp/gke"
+    source = "https://github.com/CrowdStrike/terraform-modules/tree/main/gcp/gke"
 
     alias  = var.alias
     region = var.region
@@ -24,16 +24,20 @@ module "gke" {
 }
 
 module "bastion" {
-    source = "github.com/ryanjpayne/cs-tf-modules/gcp/bastion"
+    source = "https://github.com/CrowdStrike/terraform-modules/tree/main/gcp/bastion"
     count = var.bastion == true ? 1 : 0
 }
 
 module "prometheus" {
-    source = "github.com/ryanjpayne/cs-tf-modules/gcp/prometheus"
+    source = "https://github.com/CrowdStrike/terraform-modules/tree/main/gcp/prometheus"
     count = var.prometheus == true ? 1 : 0
 }
 
 module "detection-container" {
-    source = "github.com/ryanjpayne/cs-tf-modules/gcp/detection-container"
+    source = "https://github.com/CrowdStrike/terraform-modules/tree/main/gcp/detection-container"
     count = var.detection-container == true ? 1 : 0
+}
+
+module "falcon-operator" {
+    source = "https://github.com/CrowdStrike/terraform-modules/tree/main/falcon/falcon-operator"
 }
