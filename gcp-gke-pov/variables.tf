@@ -8,21 +8,18 @@ variable "project" {
 variable "region" {
   type = string
 }
-variable "zone" {
-  type = string
-}
 
 # Optional Features
 variable "autopilot" {
-  type = bool
-}
-variable "bastion" {
   type = bool
 }
 variable "prometheus" {
   type = bool
 }
 variable "detection_container" {
+  type = bool
+}
+variable "protection_agent" {
   type = bool
 }
 
@@ -53,6 +50,9 @@ variable "public_subnet_cidr_3" {
 variable "gke_num_nodes" {
   type = number
 }
+variable "cluster_name" {
+  type = string
+}
 
 # Falcon Configuration
 # Allowed Values: FalconNodeSensoror FalconContainer
@@ -81,9 +81,18 @@ variable "client_secret" {
     description = "Falcon API Client Secret"
     sensitive = true
 }
-# Environment or 'Alias' tag
-variable "environment" {
-    description = "Environment or 'Alias' tag"
-    default = "cs-pov"
+variable "cid" {
     type = string
+    description = "Falcon CID"
+    sensitive = true
+}
+variable "crowdstrike_cloud" {
+    type = string
+    description = "Falcon Cloud"
+    sensitive = true
+}
+variable "docker_token" {
+    type = string
+    description = "Falcon Docker API Token"
+    sensitive = true
 }
