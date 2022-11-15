@@ -8,56 +8,55 @@ variable "project" {
 variable "region" {
   type = string
 }
-variable "zone" {
-  type = string
-}
 
 # Optional Features
 variable "autopilot" {
   type = bool
-}
-variable "bastion" {
-  type = bool
+  default = false
 }
 variable "prometheus" {
   type = bool
+  default = false
 }
 variable "detection_container" {
   type = bool
+  default = false
 }
 
 # Infrastructure Configuration
 variable "alias" {
   type = string
 }
-variable "private_subnet_cidr_1" {
+variable "subnet_cidr_1" {
   type = string
+  default = "10.0.1.0/24"
 }
-variable "private_subnet_cidr_2" {
+variable "subnet_cidr_2" {
   type = string
+  default = "10.0.2.0/24"
 }
-variable "private_subnet_cidr_3" {
+variable "subnet_cidr_3" {
   type = string
-}
-variable "public_subnet_cidr_1" {
-  type = string
-}
-variable "public_subnet_cidr_2" {
-  type = string
-}
-variable "public_subnet_cidr_3" {
-  type = string
+  default = "10.0.3.0/24"
 }
 
 # GKE Configuration
 variable "gke_num_nodes" {
   type = number
+  default = 1
+}
+variable "cluster_name" {
+  type = string
+}
+# Allowed Values: UBUNTU_CONTAINERD or COS_CONTAINERD
+# If you choose COS_CONTAINERD, sensor_type must = FalconContainer
+variable "node_os" {
+  type = string
+  default = "UBUNTU_CONTAINERD"
 }
 
-# Falcon Configuration
-# Allowed Values: FalconNodeSensoror FalconContainer
 # Falcon sensor type
-# Allowed Values: FalconNodeSensoror FalconContainer
+# Allowed Values: FalconNodeSensor or FalconContainer
 variable "sensor_type" {
     type = string
     default = "FalconNodeSensor"
@@ -81,9 +80,18 @@ variable "client_secret" {
     description = "Falcon API Client Secret"
     sensitive = true
 }
-# Environment or 'Alias' tag
-variable "environment" {
-    description = "Environment or 'Alias' tag"
-    default = "cs-pov"
+variable "cid" {
     type = string
+    description = "Falcon CID"
+    sensitive = true
+}
+variable "crowdstrike_cloud" {
+    type = string
+    description = "Falcon Cloud"
+    sensitive = true
+}
+variable "docker_token" {
+    type = string
+    description = "Falcon Docker API Token"
+    sensitive = true
 }
