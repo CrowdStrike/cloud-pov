@@ -32,4 +32,6 @@ docker_token = ""
 # Other Optional Features
 detection_container = false
 autopilot = false
+
+# If prometheus = true, please run `helm repo add prometheus-community https://prometheus-community.github.io/helm-charts && helm repo update`
 prometheus = false
