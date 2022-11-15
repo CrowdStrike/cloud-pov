@@ -4,12 +4,9 @@ module "network" {
     alias  = var.alias
     region = var.region
 
-    private_subnet_cidr_1 = var.private_subnet_cidr_1
-    private_subnet_cidr_2 = var.private_subnet_cidr_2
-    private_subnet_cidr_3 = var.private_subnet_cidr_3
-    public_subnet_cidr_1  = var.public_subnet_cidr_1 
-    public_subnet_cidr_2  = var.public_subnet_cidr_2 
-    public_subnet_cidr_3  = var.public_subnet_cidr_3 
+    subnet_cidr_1 = var.subnet_cidr_1
+    subnet_cidr_2 = var.subnet_cidr_2
+    subnet_cidr_3 = var.subnet_cidr_3
 }
 
 module "gke" {
@@ -17,10 +14,11 @@ module "gke" {
     cluster_name = var.cluster_name
     alias  = var.alias
     region = var.region
-
+    
     gke_num_nodes = var.gke_num_nodes
+    node_os = var.node_os
     vpc_name  = module.network.network_name
-    subnet_name   = module.network.private_subnet_1_name
+    subnet_name   = module.network.subnet_1_name
 }
 
 module "falcon" {
@@ -37,7 +35,7 @@ module "protection_agent" {
 crowdstrikeConfig:
   clientID: ${var.client_id}
   clientSecret: ${var.client_secret}
-  clusterName: ${var.alias}-${cluster_name}
+  clusterName: ${var.alias}-${var.cluster_name}
   dockerAPIToken: ${var.docker_token}
   cid: ${var.cid}
   env: ${var.crowdstrike_cloud}

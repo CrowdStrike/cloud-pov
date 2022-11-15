@@ -12,52 +12,51 @@ variable "region" {
 # Optional Features
 variable "autopilot" {
   type = bool
+  default = false
 }
 variable "prometheus" {
   type = bool
+  default = false
 }
 variable "detection_container" {
   type = bool
-}
-variable "protection_agent" {
-  type = bool
+  default = false
 }
 
 # Infrastructure Configuration
 variable "alias" {
   type = string
 }
-variable "private_subnet_cidr_1" {
+variable "subnet_cidr_1" {
   type = string
+  default = "10.0.1.0/24"
 }
-variable "private_subnet_cidr_2" {
+variable "subnet_cidr_2" {
   type = string
+  default = "10.0.2.0/24"
 }
-variable "private_subnet_cidr_3" {
+variable "subnet_cidr_3" {
   type = string
-}
-variable "public_subnet_cidr_1" {
-  type = string
-}
-variable "public_subnet_cidr_2" {
-  type = string
-}
-variable "public_subnet_cidr_3" {
-  type = string
+  default = "10.0.3.0/24"
 }
 
 # GKE Configuration
 variable "gke_num_nodes" {
   type = number
+  default = 1
 }
 variable "cluster_name" {
   type = string
 }
+# Allowed Values: UBUNTU_CONTAINERD or COS_CONTAINERD
+# If you choose COS_CONTAINERD, sensor_type must = FalconContainer
+variable "node_os" {
+  type = string
+  default = "UBUNTU_CONTAINERD"
+}
 
-# Falcon Configuration
-# Allowed Values: FalconNodeSensoror FalconContainer
 # Falcon sensor type
-# Allowed Values: FalconNodeSensoror FalconContainer
+# Allowed Values: FalconNodeSensor or FalconContainer
 variable "sensor_type" {
     type = string
     default = "FalconNodeSensor"
