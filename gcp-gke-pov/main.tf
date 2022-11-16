@@ -1,5 +1,5 @@
 module "network" {
-    source = "../../../crowdstrike/terraform-modules/gcp/network"
+    source = "github.com/CrowdStrike/terraform-modules/gcp/network"
     
     alias  = var.alias
     region = var.region
@@ -10,7 +10,7 @@ module "network" {
 }
 
 module "gke" {
-    source = "../../../crowdstrike/terraform-modules/gcp/gke"
+    source = "github.com/CrowdStrike/terraform-modules/gcp/gke"
     cluster_name = var.cluster_name
     alias  = var.alias
     region = var.region
@@ -22,7 +22,7 @@ module "gke" {
 }
 
 module "falcon" {
-    source = "../../../crowdstrike/terraform-modules/falcon/operator"
+    source = "github.com/CrowdStrike/terraform-modules/falcon/operator"
     client_id = var.client_id
     client_secret = var.client_secret
     sensor_type = var.sensor_type
@@ -30,7 +30,7 @@ module "falcon" {
 }
 
 module "protection_agent" {
-    source = "../../../crowdstrike/terraform-modules/falcon/k8s-protection-agent"
+    source = "github.com/CrowdStrike/terraform-modules/falcon/k8s-protection-agent"
     protection_agent_config = <<EOF
 crowdstrikeConfig:
   clientID: ${var.client_id}
@@ -43,6 +43,11 @@ EOF
 }
 
 module "detection_container" {
-    source = "../../../crowdstrike/terraform-modules/falcon/detection-container"
+    source = "github.com/CrowdStrike/terraform-modules/falcon/detection-container"
     count = var.detection_container == true ? 1 : 0
+}
+    
+module "prometheus" {
+    source = "github.com/CrowdStrike/terraform-modules/misc/prometheus"
+    count = var.prometheus == true ? 1 : 0
 }
