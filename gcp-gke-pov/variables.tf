@@ -1,7 +1,4 @@
 # Provider Configuration
-variable "credentials" {
-  type = string
-}
 variable "project" {
   type = string
 }
