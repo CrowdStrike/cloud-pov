@@ -15,7 +15,8 @@ subnet_cidr_3 = "10.0.3.0/24"
 cluster_name = "my-cluster"
 gke_num_nodes = 1
 node_os = "UBUNTU_CONTAINERD"  # Allowed Values: UBUNTU_CONTAINERD or COS_CONTAINERD
-
+autopilot = false
+# If you enable autopilot, prometheus must = false
 
 # CrowdStrike Config
 # Before apply, please run: `helm repo add kpagent-helm https://registry.crowdstrike.com/kpagent-helm && helm repo update`
@@ -30,8 +31,10 @@ client_secret = ""
 docker_token = ""
 
 # Other Optional Features
-detection_container = false
-autopilot = false
 
+# CrowdStrike Detection Container
+detection_container = false
+
+# Prometheus Monitoring Stack
 # If prometheus = true, please run `helm repo add prometheus-community https://prometheus-community.github.io/helm-charts && helm repo update`
 prometheus = false
