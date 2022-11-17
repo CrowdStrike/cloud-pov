@@ -1,6 +1,5 @@
 
 # Provider Configuration
-credentials = "my-gcp-key.json"
 project     = "pr-***"
 region      = "us-east1"
 
