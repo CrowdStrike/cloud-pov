@@ -126,9 +126,9 @@ spec:
     cloud_region: autodiscover
   registry:
     type: crowdstrike
-  installer_args:
-    - -falconctl-opts
-    - --tags=cs-pov
+  falcon:
+    tags: 
+    - cs-pov
 EOF
     printf "\nInstalling Container Sensor...\n"
     kubectl apply --kubeconfig /home/ec2-user/.kube/config -f /tmp/container_sensor.yaml
