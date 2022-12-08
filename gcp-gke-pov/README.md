@@ -68,7 +68,7 @@ An API client is an identity mechanism that provides secure access to the CrowdS
 
 ### Kubernetes Protection Agent Configuration
 
-The Kubernetes Protection Agent (KPA) configuration consists of specific settings to allow the KPA to be installed and to be registered with Falcon. For the EKS PoV especially the DockerAPIToken is required to download (pull) the KPA container image from the CrowdStrike container registry.  The KPA configuration includes the DockerAPIToken, Falcon cloud region and Falcon CID and can be obtained from Falcon Console.
+The Kubernetes Protection Agent (KPA) configuration consists of specific settings to allow the KPA to be installed and to be registered with Falcon. For the GKE PoV especially the DockerAPIToken is required to download (pull) the KPA container image from the CrowdStrike container registry.  The KPA configuration includes the DockerAPIToken, Falcon cloud region and Falcon CID and can be obtained from Falcon Console.
 
 ## How to Deploy
 
@@ -129,7 +129,7 @@ terraform apply -var-file=gke-pov.tfvars
 
 To validate the successful deployment of Falcon components and integration into Falcon, open the Falcon Console.
 
-Kubernetes Protection Agent (KPA) deployment can be validated by navigating to Menu → Cloud security → Account registration in Falcon Console. On this page select Kubernetes, select Active Clusters and validate that the EKS cluster is visible and has the Status of Agent Running.
+Kubernetes Protection Agent (KPA) deployment can be validated by navigating to Menu → Cloud security → Account registration in Falcon Console. On this page select Kubernetes, select Active Clusters and validate that the GKE cluster is visible and has the Status of Agent Running.
 
 To validate deployment of the Falcon Sensor deployment navigate to Menu → Host setup and management → Host management. This list contains all Falcon managed hosts in the environment. To filter for the PoV environment hosts the easiest way is to filter for the grouping tag SensorGroupingTags/cs-pov.
 
@@ -167,7 +167,7 @@ kubectl port-forward service/prometheus-grafana 3001:80 -n prometheus
 
 Open the URL http://localhost:3001 in a browser and login to Grafana using the username admin with the password prom-operator.  
 
-Once logged into Grafana, you may explore creating queries and dashboards to monitor the performance of your EKS Cluster.  For example, a simple query can be created on the Explore page.  To start, click the compass icon on the left, then select a metric from the drop down menu and finally click Run Query to view results.
+Once logged into Grafana, you may explore creating queries and dashboards to monitor the performance of your GKE Cluster.  For example, a simple query can be created on the Explore page.  To start, click the compass icon on the left, then select a metric from the drop down menu and finally click Run Query to view results.
 
 For more information on how to build queries and dashboards, please see official documentation here https://prometheus.io/docs/visualization/grafana/ 
 
