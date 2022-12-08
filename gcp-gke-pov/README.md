@@ -70,10 +70,6 @@ An API client is an identity mechanism that provides secure access to the CrowdS
 
 The Kubernetes Protection Agent (KPA) configuration consists of specific settings to allow the KPA to be installed and to be registered with Falcon. For the EKS PoV especially the DockerAPIToken is required to download (pull) the KPA container image from the CrowdStrike container registry.  The KPA configuration includes the DockerAPIToken, Falcon cloud region and Falcon CID and can be obtained from Falcon Console.
 
-### AWS IAM Permissions
-
-The AWS IAM Permissions which are required to complete prerequisite actions, launch and delete the CloudFormation Stacks successfully, are included in the example IAM policy: minimum-aws-permissions.json
-
 ## How to Deploy
 
 To retrieve the files you may download a zip or use git:
