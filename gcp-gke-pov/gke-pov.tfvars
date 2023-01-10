@@ -23,7 +23,7 @@ autopilot = false
 sensor_type = "FalconNodeSensor"  # Allowed Values: FalconNodeSensor or FalconContainer
 # If you choose COS_CONTAINERD, sensor_type must = FalconContainer
 
-cid = ""
+cid = "" # CID needs to be all lowercase and not include the hash, ie remove -XX
 crowdstrike_cloud = "us-1"
 client_id = ""
 client_secret = ""
