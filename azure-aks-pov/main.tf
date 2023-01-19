@@ -23,15 +23,12 @@ module "falcon" {
 
 module "protection_agent" {
     source                  = "github.com/CrowdStrike/terraform-modules/falcon/k8s-protection-agent"
-    protection_agent_config = <<EOF
-crowdstrikeConfig:
-  clientID: ${var.client_id}
-  clientSecret: ${var.client_secret}
-  clusterName: ${var.alias}-${var.cluster_name}
-  dockerAPIToken: ${var.docker_token}
-  cid: ${var.cid}
-  env: ${var.crowdstrike_cloud}
-EOF
+    falcon_client_id = var.client_id
+    falcon_client_secret = var.client_secret
+    cluster_name = "${var.alias}-${var.cluster_name}"
+    falcon_docker_api_token = var.docker_token
+    falcon_cid = var.cid
+    falcon_env = var.crowdstrike_cloud
 }
 
 module "detection_container" {
