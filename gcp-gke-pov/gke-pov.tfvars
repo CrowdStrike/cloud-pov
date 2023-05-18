@@ -21,7 +21,7 @@ autopilot = false
 # Before apply, please run: `helm repo add kpagent-helm https://registry.crowdstrike.com/kpagent-helm && helm repo update`
 
 sensor_type = "FalconNodeSensor"  # Allowed Values: FalconNodeSensor or FalconContainer
-# If you choose COS_CONTAINERD, sensor_type must = FalconContainer
+# If you choose autopilot = true, sensor_type must = FalconContainer
 
 cid = ""
 crowdstrike_cloud = "us-1"
